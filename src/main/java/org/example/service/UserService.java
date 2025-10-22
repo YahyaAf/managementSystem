@@ -1,0 +1,135 @@
+package org.example.service;
+
+import org.example.dto.UserRequestDTO;
+import org.example.dto.UserResponseDTO;
+import org.example.entity.User;
+import org.example.mapper.UserMapper;
+import org.example.model.enums.Role;
+import org.example.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Service
+@Transactional
+public class UserService {
+
+    @Autowired
+    private UserRepository userRepository;
+
+    public UserResponseDTO createUser(UserRequestDTO requestDTO) {
+        if (userRepository.existsByEmail(requestDTO.getEmail())) {
+            throw new RuntimeException("Email already exists: " + requestDTO.getEmail());
+        }
+        User user = UserMapper.toEntity(requestDTO);
+        User savedUser = userRepository.save(user);
+
+        return UserMapper.toResponse(savedUser);
+    }
+
+    @Transactional(readOnly = true)
+    public List<UserResponseDTO> getAllUsers() {
+        List<User> users = userRepository.findAllActive();
+        return UserMapper.toResponseList(users);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<UserResponseDTO> getAllUsersPaginated(Pageable pageable) {
+        Page<User> users = userRepository.findAll(pageable);
+        return users.map(UserMapper::toResponse);
+    }
+
+    @Transactional(readOnly = true)
+    public UserResponseDTO getUserById(Long id) {
+        User user = userRepository.findActiveById(id)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+
+        return UserMapper.toResponse(user);
+    }
+
+    @Transactional(readOnly = true)
+    public UserResponseDTO getUserByEmail(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
+
+        return UserMapper.toResponse(user);
+    }
+
+    @Transactional(readOnly = true)
+    public List<UserResponseDTO> searchUsersByName(String name) {
+        List<User> users = userRepository.findByNomContainingIgnoreCase(name);
+        return UserMapper.toResponseList(users);
+    }
+
+    @Transactional(readOnly = true)
+    public List<UserResponseDTO> getUsersByRole(String role) {
+        List<User> users = userRepository.findByRole(
+                Role.valueOf(role.toUpperCase())
+        );
+        return UserMapper.toResponseList(users);
+    }
+
+    @Transactional(readOnly = true)
+    public List<UserResponseDTO> getActiveUsers() {
+        List<User> users = userRepository.findByActif(true);
+        return UserMapper.toResponseList(users);
+    }
+
+
+    public UserResponseDTO updateUser(Long id, UserRequestDTO requestDTO) {
+        User existingUser = userRepository.findActiveById(id)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+
+        if (requestDTO.getEmail() != null &&
+                !requestDTO.getEmail().equals(existingUser.getEmail()) &&
+                userRepository.existsByEmail(requestDTO.getEmail())) {
+            throw new RuntimeException("Email already exists: " + requestDTO.getEmail());
+        }
+
+        UserMapper.updateEntityFromDTO(existingUser, requestDTO);
+        User updatedUser = userRepository.save(existingUser);
+
+        return UserMapper.toResponse(updatedUser);
+    }
+
+    public UserResponseDTO toggleUserStatus(Long id) {
+        User user = userRepository.findActiveById(id)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+
+        user.setActif(!user.getActif());
+        User updatedUser = userRepository.save(user);
+
+        return UserMapper.toResponse(updatedUser);
+    }
+
+    public void softDeleteUser(Long id) {
+        User user = userRepository.findActiveById(id)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+
+        user.setDeletedAt(LocalDateTime.now());
+        user.setActif(false);
+        userRepository.save(user);
+    }
+
+    public void hardDeleteUser(Long id) {
+        if (!userRepository.existsById(id)) {
+            throw new RuntimeException("User not found with id: " + id);
+        }
+        userRepository.deleteById(id);
+    }
+
+    @Transactional(readOnly = true)
+    public long countActiveUsers() {
+        return userRepository.countActiveUsers();
+    }
+
+    @Transactional(readOnly = true)
+    public long countAllUsers() {
+        return userRepository.count();
+    }
+}
