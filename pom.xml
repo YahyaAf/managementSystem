@@ -9,6 +9,9 @@
     <artifactId>managementSystems</artifactId>
     <version>1.0-SNAPSHOT</version>
 
+    <!-- ⭐ زيد هاد السطر -->
+    <packaging>war</packaging>
+
     <properties>
         <java.version>17</java.version>
         <spring.version>6.1.3</spring.version>
@@ -19,6 +22,7 @@
     </properties>
 
     <dependencies>
+        <!-- ... dependencies ديالك بقاو بحالهم ... -->
 
         <!-- 🧩 Spring Core / Context -->
         <dependency>
@@ -55,14 +59,6 @@
             <artifactId>postgresql</artifactId>
             <version>42.7.3</version>
         </dependency>
-
-        <!-- OR MySQL (if you use MySQL instead of PostgreSQL)
-        <dependency>
-            <groupId>com.mysql</groupId>
-            <artifactId>mysql-connector-j</artifactId>
-            <version>9.0.0</version>
-        </dependency>
-        -->
 
         <!-- 📦 JPA API -->
         <dependency>
@@ -119,5 +115,32 @@
         </dependency>
 
     </dependencies>
+
+    <!-- ⭐ زيد Build Section كاملة -->
+    <build>
+        <finalName>spring-user-mgt</finalName>
+        <plugins>
+            <!-- Maven WAR Plugin -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-war-plugin</artifactId>
+                <version>3.4.0</version>
+                <configuration>
+                    <failOnMissingWebXml>false</failOnMissingWebXml>
+                </configuration>
+            </plugin>
+
+            <!-- Maven Compiler Plugin -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.11.0</version>
+                <configuration>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>
