@@ -2,7 +2,6 @@ package org.example.controller;
 
 import org.example.dto.UserRequestDTO;
 import org.example.dto.UserResponseDTO;
-import org.example.repository.UserRepository;
 import org.example.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -21,13 +20,12 @@ import java.util.Map;
 @RequestMapping("/api/users")
 public class UserController {
 
-    private UserService userService;
+    private final UserService userService;
 
     @Autowired
     public UserController(UserService userService){
         this.userService = userService;
     }
-
 
     @PostMapping
     public ResponseEntity<Map<String, Object>> createUser(@RequestBody UserRequestDTO request) {
@@ -44,7 +42,6 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
         }
     }
-
 
     @GetMapping
     public ResponseEntity<Map<String, Object>> getAllUsers() {
@@ -64,10 +61,10 @@ public class UserController {
 
     @GetMapping("/paginated")
     public ResponseEntity<Map<String, Object>> getAllUsersPaginated(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "id") String sortBy,
-            @RequestParam(defaultValue = "asc") String direction
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size,
+            @RequestParam(value = "sortBy", defaultValue = "id") String sortBy,
+            @RequestParam(value = "direction", defaultValue = "asc") String direction
     ) {
         Map<String, Object> response = new HashMap<>();
         try {
@@ -91,7 +88,6 @@ public class UserController {
         }
     }
 
-
     @GetMapping("/{id}")
     public ResponseEntity<Map<String, Object>> getUserById(@PathVariable("id") Long id) {
         Map<String, Object> response = new HashMap<>();
@@ -107,9 +103,8 @@ public class UserController {
         }
     }
 
-
     @GetMapping("/email/{email}")
-    public ResponseEntity<Map<String, Object>> getUserByEmail(@PathVariable String email) {
+    public ResponseEntity<Map<String, Object>> getUserByEmail(@PathVariable("email") String email) {
         Map<String, Object> response = new HashMap<>();
         try {
             UserResponseDTO user = userService.getUserByEmail(email);
@@ -123,9 +118,8 @@ public class UserController {
         }
     }
 
-
     @GetMapping("/search")
-    public ResponseEntity<Map<String, Object>> searchUsers(@RequestParam String name) {
+    public ResponseEntity<Map<String, Object>> searchUsers(@RequestParam(value = "name") String name) {
         Map<String, Object> response = new HashMap<>();
         try {
             List<UserResponseDTO> users = userService.searchUsersByName(name);
@@ -140,9 +134,8 @@ public class UserController {
         }
     }
 
-
     @GetMapping("/role/{role}")
-    public ResponseEntity<Map<String, Object>> getUsersByRole(@PathVariable String role) {
+    public ResponseEntity<Map<String, Object>> getUsersByRole(@PathVariable("role") String role) {
         Map<String, Object> response = new HashMap<>();
         try {
             List<UserResponseDTO> users = userService.getUsersByRole(role);
@@ -159,7 +152,7 @@ public class UserController {
 
     @PutMapping("/{id}")
     public ResponseEntity<Map<String, Object>> updateUser(
-            @PathVariable Long id,
+            @PathVariable("id") Long id,
             @RequestBody UserRequestDTO request
     ) {
         Map<String, Object> response = new HashMap<>();
@@ -176,9 +169,8 @@ public class UserController {
         }
     }
 
-
     @DeleteMapping("/{id}/soft")
-    public ResponseEntity<Map<String, Object>> softDeleteUser(@PathVariable Long id) {
+    public ResponseEntity<Map<String, Object>> softDeleteUser(@PathVariable("id") Long id) {
         Map<String, Object> response = new HashMap<>();
         try {
             userService.softDeleteUser(id);
@@ -193,7 +185,7 @@ public class UserController {
     }
 
     @DeleteMapping("/{id}/hard")
-    public ResponseEntity<Map<String, Object>> hardDeleteUser(@PathVariable Long id) {
+    public ResponseEntity<Map<String, Object>> hardDeleteUser(@PathVariable("id") Long id) {
         Map<String, Object> response = new HashMap<>();
         try {
             userService.hardDeleteUser(id);
@@ -206,5 +198,4 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
         }
     }
-
 }
