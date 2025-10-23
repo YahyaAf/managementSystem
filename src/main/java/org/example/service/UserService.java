@@ -9,6 +9,7 @@ import org.example.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,18 +20,33 @@ import java.util.List;
 @Transactional
 public class UserService {
 
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
+    private final BCryptPasswordEncoder passwordEncoder;
 
     @Autowired
-    public UserService(UserRepository userRepository){
+    public UserService(UserRepository userRepository) {
         this.userRepository = userRepository;
+        this.passwordEncoder = new BCryptPasswordEncoder();
     }
 
     public UserResponseDTO createUser(UserRequestDTO requestDTO) {
+        // ⭐ Validation du mot de passe
+        if (requestDTO.getMotDePasse() == null || requestDTO.getMotDePasse().trim().isEmpty()) {
+            throw new IllegalArgumentException("Password is required");
+        }
+
+        if (requestDTO.getMotDePasse().length() < 6) {
+            throw new IllegalArgumentException("Password must be at least 6 characters");
+        }
+
         if (userRepository.existsByEmail(requestDTO.getEmail())) {
             throw new RuntimeException("Email already exists: " + requestDTO.getEmail());
         }
+
         User user = UserMapper.toEntity(requestDTO);
+
+        user.setMotDePasse(passwordEncoder.encode(requestDTO.getMotDePasse()));
+
         User savedUser = userRepository.save(user);
 
         return UserMapper.toResponse(savedUser);
@@ -61,6 +77,11 @@ public class UserService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
 
+        // ⭐ Vérifiez si l'utilisateur est supprimé
+        if (user.getDeletedAt() != null) {
+            throw new RuntimeException("User has been deleted");
+        }
+
         return UserMapper.toResponse(user);
     }
 
@@ -72,10 +93,15 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public List<UserResponseDTO> getUsersByRole(String role) {
-        List<User> users = userRepository.findByRole(
-                Role.valueOf(role.toUpperCase())
-        );
-        return UserMapper.toResponseList(users);
+        try {
+            List<User> users = userRepository.findByRole(
+                    Role.valueOf(role.toUpperCase())
+            );
+            return UserMapper.toResponseList(users);
+        } catch (IllegalArgumentException e) {
+            throw new RuntimeException("Invalid role: " + role + ". Valid roles are: " +
+                    String.join(", ", getAllRoleNames()));
+        }
     }
 
     @Transactional(readOnly = true)
@@ -83,7 +109,6 @@ public class UserService {
         List<User> users = userRepository.findByActif(true);
         return UserMapper.toResponseList(users);
     }
-
 
     public UserResponseDTO updateUser(Long id, UserRequestDTO requestDTO) {
         User existingUser = userRepository.findActiveById(id)
@@ -96,6 +121,14 @@ public class UserService {
         }
 
         UserMapper.updateEntityFromDTO(existingUser, requestDTO);
+
+        if (requestDTO.getMotDePasse() != null && !requestDTO.getMotDePasse().trim().isEmpty()) {
+            if (requestDTO.getMotDePasse().length() < 6) {
+                throw new IllegalArgumentException("Password must be at least 6 characters");
+            }
+            existingUser.setMotDePasse(passwordEncoder.encode(requestDTO.getMotDePasse()));
+        }
+
         User updatedUser = userRepository.save(existingUser);
 
         return UserMapper.toResponse(updatedUser);
@@ -135,5 +168,14 @@ public class UserService {
     @Transactional(readOnly = true)
     public long countAllUsers() {
         return userRepository.count();
+    }
+
+    private String[] getAllRoleNames() {
+        Role[] roles = Role.values();
+        String[] roleNames = new String[roles.length];
+        for (int i = 0; i < roles.length; i++) {
+            roleNames[i] = roles[i].name();
+        }
+        return roleNames;
     }
 }

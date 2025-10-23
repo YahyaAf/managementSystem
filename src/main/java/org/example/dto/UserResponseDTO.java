@@ -1,5 +1,6 @@
 package org.example.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import org.example.model.enums.Role;
 import org.example.model.User;
 
@@ -12,7 +13,9 @@ public class UserResponseDTO {
     private String email;
     private Role role;
     private Boolean actif;
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime createdAt;
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime updatedAt;
 
     // Constructeurs
