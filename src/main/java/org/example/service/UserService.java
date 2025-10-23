@@ -155,7 +155,6 @@ public class UserService {
             if (requestDTO.getMotDePasse().length() < 6) {
                 throw new IllegalArgumentException("Password must be at least 6 characters");
             }
-            existingUser.setMotDePasse(passwordEncoder.encode(requestDTO.getMotDePasse()));
         }
 
         if (requestDTO.getRole() != null) {
@@ -165,6 +164,11 @@ public class UserService {
         }
 
         UserMapper.updateEntityFromDTO(existingUser, requestDTO);
+
+        if (requestDTO.getMotDePasse() != null && !requestDTO.getMotDePasse().trim().isEmpty()) {
+            existingUser.setMotDePasse(passwordEncoder.encode(requestDTO.getMotDePasse()));
+        }
+
         User updatedUser = userRepository.save(existingUser);
         return UserMapper.toResponse(updatedUser);
     }
