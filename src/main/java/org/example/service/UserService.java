@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.regex.Pattern;
 
 @Service
 @Transactional
@@ -23,6 +24,11 @@ public class UserService {
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder passwordEncoder;
 
+    // ⭐ Regex pour validation email
+    private static final Pattern EMAIL_PATTERN = Pattern.compile(
+            "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$"
+    );
+
     @Autowired
     public UserService(UserRepository userRepository) {
         this.userRepository = userRepository;
@@ -30,25 +36,45 @@ public class UserService {
     }
 
     public UserResponseDTO createUser(UserRequestDTO requestDTO) {
-        // ⭐ Validation du mot de passe
-        if (requestDTO.getMotDePasse() == null || requestDTO.getMotDePasse().trim().isEmpty()) {
-            throw new IllegalArgumentException("Password is required");
+        if (requestDTO.getNom() == null || requestDTO.getNom().trim().isEmpty()) {
+            throw new IllegalArgumentException("Name is required");
+        }
+        if (requestDTO.getNom().trim().length() < 3) {
+            throw new IllegalArgumentException("Name must be at least 3 characters");
+        }
+        if (requestDTO.getNom().trim().length() > 100) {
+            throw new IllegalArgumentException("Name must not exceed 100 characters");
         }
 
+        if (requestDTO.getEmail() == null || requestDTO.getEmail().trim().isEmpty()) {
+            throw new IllegalArgumentException("Email is required");
+        }
+        if (!EMAIL_PATTERN.matcher(requestDTO.getEmail().trim()).matches()) {
+            throw new IllegalArgumentException("Invalid email format");
+        }
+
+        if (userRepository.existsByEmail(requestDTO.getEmail())) {
+            throw new IllegalArgumentException("Email already exists: " + requestDTO.getEmail());
+        }
+
+        if (requestDTO.getMotDePasse() == null || requestDTO.getMotDePasse().isEmpty()) {
+            throw new IllegalArgumentException("Password is required");
+        }
         if (requestDTO.getMotDePasse().length() < 6) {
             throw new IllegalArgumentException("Password must be at least 6 characters");
         }
 
-        if (userRepository.existsByEmail(requestDTO.getEmail())) {
-            throw new RuntimeException("Email already exists: " + requestDTO.getEmail());
+        if (requestDTO.getRole() == null) {
+            throw new IllegalArgumentException("Role is required");
+        }
+        if (requestDTO.getRole() != Role.ADMIN && requestDTO.getRole() != Role.USER) {
+            throw new IllegalArgumentException("Role must be ADMIN or USER");
         }
 
         User user = UserMapper.toEntity(requestDTO);
-
         user.setMotDePasse(passwordEncoder.encode(requestDTO.getMotDePasse()));
 
         User savedUser = userRepository.save(user);
-
         return UserMapper.toResponse(savedUser);
     }
 
@@ -68,7 +94,6 @@ public class UserService {
     public UserResponseDTO getUserById(Long id) {
         User user = userRepository.findActiveById(id)
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
-
         return UserMapper.toResponse(user);
     }
 
@@ -77,7 +102,6 @@ public class UserService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
 
-        // ⭐ Vérifiez si l'utilisateur est supprimé
         if (user.getDeletedAt() != null) {
             throw new RuntimeException("User has been deleted");
         }
@@ -104,23 +128,28 @@ public class UserService {
         }
     }
 
-    @Transactional(readOnly = true)
-    public List<UserResponseDTO> getActiveUsers() {
-        List<User> users = userRepository.findByActif(true);
-        return UserMapper.toResponseList(users);
-    }
-
     public UserResponseDTO updateUser(Long id, UserRequestDTO requestDTO) {
         User existingUser = userRepository.findActiveById(id)
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
 
-        if (requestDTO.getEmail() != null &&
-                !requestDTO.getEmail().equals(existingUser.getEmail()) &&
-                userRepository.existsByEmail(requestDTO.getEmail())) {
-            throw new RuntimeException("Email already exists: " + requestDTO.getEmail());
+        if (requestDTO.getNom() != null) {
+            if (requestDTO.getNom().trim().length() < 3) {
+                throw new IllegalArgumentException("Name must be at least 3 characters");
+            }
+            if (requestDTO.getNom().trim().length() > 100) {
+                throw new IllegalArgumentException("Name must not exceed 100 characters");
+            }
         }
 
-        UserMapper.updateEntityFromDTO(existingUser, requestDTO);
+        if (requestDTO.getEmail() != null) {
+            if (!EMAIL_PATTERN.matcher(requestDTO.getEmail().trim()).matches()) {
+                throw new IllegalArgumentException("Invalid email format");
+            }
+            if (!requestDTO.getEmail().equals(existingUser.getEmail()) &&
+                    userRepository.existsByEmail(requestDTO.getEmail())) {
+                throw new IllegalArgumentException("Email already exists: " + requestDTO.getEmail());
+            }
+        }
 
         if (requestDTO.getMotDePasse() != null && !requestDTO.getMotDePasse().trim().isEmpty()) {
             if (requestDTO.getMotDePasse().length() < 6) {
@@ -129,18 +158,14 @@ public class UserService {
             existingUser.setMotDePasse(passwordEncoder.encode(requestDTO.getMotDePasse()));
         }
 
+        if (requestDTO.getRole() != null) {
+            if (requestDTO.getRole() != Role.ADMIN && requestDTO.getRole() != Role.USER) {
+                throw new IllegalArgumentException("Role must be ADMIN or USER");
+            }
+        }
+
+        UserMapper.updateEntityFromDTO(existingUser, requestDTO);
         User updatedUser = userRepository.save(existingUser);
-
-        return UserMapper.toResponse(updatedUser);
-    }
-
-    public UserResponseDTO toggleUserStatus(Long id) {
-        User user = userRepository.findActiveById(id)
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
-
-        user.setActif(!user.getActif());
-        User updatedUser = userRepository.save(user);
-
         return UserMapper.toResponse(updatedUser);
     }
 
@@ -158,16 +183,6 @@ public class UserService {
             throw new RuntimeException("User not found with id: " + id);
         }
         userRepository.deleteById(id);
-    }
-
-    @Transactional(readOnly = true)
-    public long countActiveUsers() {
-        return userRepository.countActiveUsers();
-    }
-
-    @Transactional(readOnly = true)
-    public long countAllUsers() {
-        return userRepository.count();
     }
 
     private String[] getAllRoleNames() {

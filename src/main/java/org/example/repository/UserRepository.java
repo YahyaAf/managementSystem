@@ -15,14 +15,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByEmail(String email);
     boolean existsByEmail(String email);
-    List<User> findByActif(Boolean actif);
     List<User> findByRole(Role role);
-    List<User> findByActifAndRole(Boolean actif, Role role);
     List<User> findByNomContainingIgnoreCase(String nom);
     @Query("SELECT u FROM User u WHERE u.deletedAt IS NULL")
     List<User> findAllActive();
     @Query("SELECT u FROM User u WHERE u.id = :id AND u.deletedAt IS NULL")
     Optional<User> findActiveById(@Param("id") Long id);
-    @Query("SELECT COUNT(u) FROM User u WHERE u.actif = true AND u.deletedAt IS NULL")
-    long countActiveUsers();
 }
