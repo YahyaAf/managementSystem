@@ -93,7 +93,7 @@ public class UserController {
 
 
     @GetMapping("/{id}")
-    public ResponseEntity<Map<String, Object>> getUserById(@PathVariable Long id) {
+    public ResponseEntity<Map<String, Object>> getUserById(@PathVariable("id") Long id) {
         Map<String, Object> response = new HashMap<>();
         try {
             UserResponseDTO user = userService.getUserById(id);
