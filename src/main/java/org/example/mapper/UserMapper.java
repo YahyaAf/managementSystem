@@ -2,7 +2,7 @@ package org.example.mapper;
 
 import org.example.dto.UserRequestDTO;
 import org.example.dto.UserResponseDTO;
-import org.example.entity.User;
+import org.example.model.User;
 
 import java.util.List;
 import java.util.stream.Collectors;

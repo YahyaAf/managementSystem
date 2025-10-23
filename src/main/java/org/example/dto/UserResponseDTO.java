@@ -1,7 +1,7 @@
 package org.example.dto;
 
 import org.example.model.enums.Role;
-import org.example.entity.User;
+import org.example.model.User;
 
 import java.time.LocalDateTime;
 

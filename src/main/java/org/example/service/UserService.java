@@ -2,7 +2,7 @@ package org.example.service;
 
 import org.example.dto.UserRequestDTO;
 import org.example.dto.UserResponseDTO;
-import org.example.entity.User;
+import org.example.model.User;
 import org.example.mapper.UserMapper;
 import org.example.model.enums.Role;
 import org.example.repository.UserRepository;
@@ -19,8 +19,12 @@ import java.util.List;
 @Transactional
 public class UserService {
 
-    @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    public UserService(UserRepository userRepository){
+        this.userRepository = userRepository;
+    }
 
     public UserResponseDTO createUser(UserRequestDTO requestDTO) {
         if (userRepository.existsByEmail(requestDTO.getEmail())) {
